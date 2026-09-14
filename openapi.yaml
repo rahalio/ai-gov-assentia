@@ -1,0 +1,1917 @@
+openapi: 3.0.3
+info:
+  title: Assentia
+  version: 0.1.0
+  description: >-
+    Deployment-warrant system for public-sector AI. Public bodies publish challenges
+    before tender, register ai-assisted decision services against a consequence grade,
+    assemble a disclosable evidence pack, value any public data they supply, and receive
+    a named, time-boxed, revocable warrant to operate. Every decision writes an
+    explanation artefact that a citizen can retrieve and contest.
+  x-product-slug: ai-gov-assentia
+  x-source: ai-in-gov/ai-in-the-UK-ReadyWillingAndAble-April-2018/
+servers:
+  - url: https://api.example.com
+tags:
+  - name: Challenges
+    description: Open pre-tender board of public-sector problems open to ai-based solutions
+  - name: Procurement
+    description: Tender lots, awards, and SME participation accounting
+  - name: Assurance
+    description: Service registration, consequence grading, evidence packs, intelligibility
+  - name: Warrants
+    description: Deployment warrant issue, renewal, revalidation, and suspension
+  - name: DataSupply
+    description: Public data supply agreements, valuations, and external review
+  - name: Decisions
+    description: Decision records and citizen-retrievable explanation artefacts
+  - name: Redress
+    description: Citizen challenge intake, adjudication, and overturn recording
+  - name: Portfolio
+    description: Speculative and prototype investment governance
+  - name: Reporting
+    description: SME access reporting, oversight workload, and the annual return
+paths:
+  /v1/challenges:
+    get:
+      operationId: listPublicChallenges
+      tags: [Challenges]
+      summary: List published public-sector challenges
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: buyingBodyId
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, published, in_procurement, awarded, withdrawn]
+      responses:
+        "200":
+          description: Challenges page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopePublicChallenge"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: publishPublicChallenge
+      tags: [Challenges]
+      summary: Publish a challenge to the open board before tender
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PublicChallengeCreate"
+      responses:
+        "201":
+          description: Challenge published
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopePublicChallenge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+  /v1/challenges/{challengeId}:
+    parameters:
+      - $ref: "#/components/parameters/ChallengeId"
+    get:
+      operationId: getPublicChallenge
+      tags: [Challenges]
+      summary: Retrieve a published challenge
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Challenge
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopePublicChallenge"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/tender-lots:
+    get:
+      operationId: listTenderLots
+      tags: [Procurement]
+      summary: List tender lots with participation counts
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: challengeId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Tender lots page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeTenderLot"
+    post:
+      operationId: createTenderLot
+      tags: [Procurement]
+      summary: Open a tender lot against a published challenge
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TenderLotCreate"
+      responses:
+        "201":
+          description: Lot opened
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeTenderLot"
+        "409":
+          description: Challenge not published, so the lot cannot open
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /v1/tender-lots/{lotId}/award:
+    parameters:
+      - $ref: "#/components/parameters/LotId"
+    post:
+      operationId: recordLotAward
+      tags: [Procurement]
+      summary: Record the award of a lot to a supplier
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LotAwardCreate"
+      responses:
+        "201":
+          description: Award recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeLotAward"
+        "409":
+          description: Award blocked because a required data valuation is missing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /v1/services:
+    get:
+      operationId: listAiServices
+      tags: [Assurance]
+      summary: List registered ai-assisted decision services
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: consequenceGrade
+          in: query
+          schema:
+            $ref: "#/components/schemas/ConsequenceGrade"
+        - name: operatingStatus
+          in: query
+          schema:
+            type: string
+            enum: [registered, assured, live, suspended, retired]
+      responses:
+        "200":
+          description: Services page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeAiService"
+    post:
+      operationId: registerAiService
+      tags: [Assurance]
+      summary: Register a service and set its consequence grade
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiServiceCreate"
+      responses:
+        "201":
+          description: Service registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeAiService"
+  /v1/services/{serviceId}/evidence-packs:
+    parameters:
+      - $ref: "#/components/parameters/ServiceId"
+    post:
+      operationId: submitEvidencePack
+      tags: [Assurance]
+      summary: Submit a versioned evidence pack for a service
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EvidencePackCreate"
+      responses:
+        "201":
+          description: Evidence pack version accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeEvidencePack"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+  /v1/services/{serviceId}/intelligibility-assessments:
+    parameters:
+      - $ref: "#/components/parameters/ServiceId"
+    post:
+      operationId: assessIntelligibility
+      tags: [Assurance]
+      summary: Record an intelligibility assessment against the grade standard
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IntelligibilityAssessmentCreate"
+      responses:
+        "201":
+          description: Assessment recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeIntelligibilityAssessment"
+  /v1/services/{serviceId}/code-conformance:
+    parameters:
+      - $ref: "#/components/parameters/ServiceId"
+    put:
+      operationId: setCodeConformance
+      tags: [Assurance]
+      summary: Set or update the ethical code seal status for a service
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CodeConformance"
+      responses:
+        "200":
+          description: Conformance updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeCodeConformance"
+  /v1/warrants:
+    get:
+      operationId: listDeploymentWarrants
+      tags: [Warrants]
+      summary: List deployment warrants
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [issued, expiring, expired, suspended, revalidation_required, withdrawn]
+      responses:
+        "200":
+          description: Warrants page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeDeploymentWarrant"
+    post:
+      operationId: issueDeploymentWarrant
+      tags: [Warrants]
+      summary: Issue a named, time-boxed warrant to operate
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WarrantIssueRequest"
+      responses:
+        "201":
+          description: Warrant issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeDeploymentWarrant"
+        "409":
+          description: Warrant refused because the service cannot meet its explanation standard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /v1/warrants/{warrantId}:
+    parameters:
+      - $ref: "#/components/parameters/WarrantId"
+    get:
+      operationId: getDeploymentWarrant
+      tags: [Warrants]
+      summary: Retrieve a warrant with its evidence references
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Warrant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeDeploymentWarrant"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/warrants/{warrantId}/suspension:
+    parameters:
+      - $ref: "#/components/parameters/WarrantId"
+    post:
+      operationId: suspendDeploymentWarrant
+      tags: [Warrants]
+      summary: Suspend a warrant and stop live operation
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [trigger, rationale]
+              properties:
+                trigger:
+                  type: string
+                  enum:
+                    - evidence_gap
+                    - expiry
+                    - code_seal_withdrawn
+                    - owner_vacated
+                    - machinery_of_government_change
+                    - overturn_pattern
+                    - valuation_missing
+                rationale:
+                  type: string
+                effectiveAt:
+                  type: string
+                  format: date-time
+      responses:
+        "202":
+          description: Suspension accepted and pushed to the operating gate
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeDeploymentWarrant"
+  /v1/warrants/{warrantId}/revalidation:
+    parameters:
+      - $ref: "#/components/parameters/WarrantId"
+    post:
+      operationId: revalidateDeploymentWarrant
+      tags: [Warrants]
+      summary: Revalidate a warrant after an owner or department change
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [accountableOwner]
+              properties:
+                accountableOwner:
+                  $ref: "#/components/schemas/AccountableOwner"
+                transferredFromBuyingBodyId:
+                  type: string
+      responses:
+        "200":
+          description: Warrant revalidated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeDeploymentWarrant"
+  /v1/data-supply-agreements:
+    get:
+      operationId: listDataSupplyAgreements
+      tags: [DataSupply]
+      summary: List agreements supplying public data to suppliers
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: significant
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Agreements page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeDataSupplyAgreement"
+    post:
+      operationId: registerDataSupplyAgreement
+      tags: [DataSupply]
+      summary: Register an intended public data supply agreement
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataSupplyAgreementCreate"
+      responses:
+        "201":
+          description: Agreement registered, pending valuation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeDataSupplyAgreement"
+  /v1/data-supply-agreements/{agreementId}/valuation:
+    parameters:
+      - $ref: "#/components/parameters/AgreementId"
+    post:
+      operationId: recordDataValuation
+      tags: [DataSupply]
+      summary: Record an evidence-based valuation of the data being supplied
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataValuationCreate"
+      responses:
+        "201":
+          description: Valuation recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeDataValuation"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+  /v1/data-supply-agreements/{agreementId}/external-review:
+    parameters:
+      - $ref: "#/components/parameters/AgreementId"
+    post:
+      operationId: submitAgreementForExternalReview
+      tags: [DataSupply]
+      summary: Refer a significant agreement for external review before signature
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reviewerBody]
+              properties:
+                reviewerBody:
+                  type: string
+                  description: Oversight body asked to review the agreement terms
+                submissionNote:
+                  type: string
+      responses:
+        "202":
+          description: Referred for review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeDataSupplyAgreement"
+  /v1/decisions:
+    post:
+      operationId: recordDecision
+      tags: [Decisions]
+      summary: Record a decision taken or prepared by a live ai-assisted service
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DecisionRecordCreate"
+      responses:
+        "201":
+          description: Decision recorded with an explanation artefact
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeDecisionRecord"
+        "409":
+          description: Rejected because the service holds no current warrant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /v1/decisions/{decisionId}/explanation:
+    parameters:
+      - $ref: "#/components/parameters/DecisionId"
+    get:
+      operationId: getDecisionExplanation
+      tags: [Decisions]
+      summary: Retrieve the explanation as it stood when the decision was taken
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Explanation artefact
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeExplanationArtifact"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/redress-cases:
+    get:
+      operationId: listRedressCases
+      tags: [Redress]
+      summary: List citizen challenges against ai-assisted decisions
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: serviceId
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, under_review, escalated, resolved, expired]
+      responses:
+        "200":
+          description: Redress cases page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeRedressCase"
+    post:
+      operationId: openRedressCase
+      tags: [Redress]
+      summary: Open a time-boxed challenge through the single published route
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RedressCaseCreate"
+      responses:
+        "201":
+          description: Challenge opened with a resolution deadline
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeRedressCase"
+  /v1/redress-cases/{caseId}/resolution:
+    parameters:
+      - $ref: "#/components/parameters/CaseId"
+    post:
+      operationId: resolveRedressCase
+      tags: [Redress]
+      summary: Resolve a challenge and record any overturn
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [outcome, rationale]
+              properties:
+                outcome:
+                  type: string
+                  enum: [upheld_original, overturned, partially_overturned, referred_out]
+                rationale:
+                  type: string
+                overturnReason:
+                  type: string
+                  enum:
+                    - inadequate_explanation
+                    - incorrect_input_data
+                    - policy_misapplication
+                    - unlawful_basis
+                    - other
+      responses:
+        "200":
+          description: Challenge resolved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeRedressCase"
+  /v1/portfolio/investments:
+    get:
+      operationId: listPortfolioInvestments
+      tags: [Portfolio]
+      summary: List speculative and prototype investments with failure tolerance
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Portfolio investments page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopePortfolioInvestment"
+    post:
+      operationId: createPortfolioInvestment
+      tags: [Portfolio]
+      summary: Place a prototype inside a declared portfolio
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PortfolioInvestmentCreate"
+      responses:
+        "201":
+          description: Investment recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopePortfolioInvestment"
+  /v1/reports/sme-access:
+    get:
+      operationId: getSmeAccessReport
+      tags: [Reporting]
+      summary: SME participation by count and by contract value
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            example: 2026-Q3
+        - name: buyingBodyId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: SME access report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeSmeAccessReport"
+  /v1/reports/oversight-workload:
+    get:
+      operationId: listOversightWorkload
+      tags: [Reporting]
+      summary: Assurance and regulatory effort consumed by the portfolio
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: period
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Oversight workload entries page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeOversightWorkloadEntry"
+  /v1/reports/annual-return:
+    get:
+      operationId: getAnnualReturn
+      tags: [Reporting]
+      summary: Stable-definition annual return with comparator benchmarking
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: year
+          in: query
+          required: true
+          schema:
+            type: integer
+            example: 2026
+      responses:
+        "200":
+          description: Annual return
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeAnnualReturn"
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Cursor:
+      name: cursor
+      in: query
+      schema:
+        type: string
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+    ChallengeId:
+      name: challengeId
+      in: path
+      required: true
+      schema:
+        type: string
+    LotId:
+      name: lotId
+      in: path
+      required: true
+      schema:
+        type: string
+    ServiceId:
+      name: serviceId
+      in: path
+      required: true
+      schema:
+        type: string
+    WarrantId:
+      name: warrantId
+      in: path
+      required: true
+      schema:
+        type: string
+    AgreementId:
+      name: agreementId
+      in: path
+      required: true
+      schema:
+        type: string
+    DecisionId:
+      name: decisionId
+      in: path
+      required: true
+      schema:
+        type: string
+    CaseId:
+      name: caseId
+      in: path
+      required: true
+      schema:
+        type: string
+  responses:
+    Unauthorized:
+      description: Missing or invalid credentials
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    UnprocessableEntity:
+      description: Validation failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+  schemas:
+    ResponseMeta:
+      type: object
+      required: [requestId, timestamp]
+      properties:
+        requestId:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+    Problem:
+      type: object
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+    Money:
+      type: object
+      required: [amount, currency]
+      properties:
+        amount:
+          type: number
+          format: double
+        currency:
+          type: string
+          example: GBP
+    ConsequenceGrade:
+      type: string
+      description: >-
+        Severity of the effect of the service on an identifiable individual. The grade
+        sets the explanation standard and whether a transparent-method requirement can
+        be imposed by a sector regulator.
+      enum: [informational, advisory, material, safety_critical]
+    AccountableOwner:
+      type: object
+      required: [name, role]
+      properties:
+        name:
+          type: string
+        role:
+          type: string
+        buyingBodyId:
+          type: string
+        appointedAt:
+          type: string
+          format: date-time
+    BuyingBody:
+      type: object
+      required: [id, name, bodyType]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        bodyType:
+          type: string
+          enum: [ministerial_department, arms_length_body, nhs_trust, local_authority, devolved_body]
+        accountingOfficer:
+          type: string
+        sectorRegulators:
+          type: array
+          items:
+            type: string
+    PublicChallenge:
+      type: object
+      required: [id, buyingBodyId, title, status, publishedAt]
+      properties:
+        id:
+          type: string
+        buyingBodyId:
+          type: string
+        title:
+          type: string
+        problemStatement:
+          type: string
+        affectedService:
+          type: string
+        anticipatedConsequenceGrade:
+          $ref: "#/components/schemas/ConsequenceGrade"
+        routeToMarket:
+          type: string
+          enum: [framework_call_off, open_tender, prototype_competition, direct_award]
+        indicativeValue:
+          $ref: "#/components/schemas/Money"
+        status:
+          type: string
+          enum: [draft, published, in_procurement, awarded, withdrawn]
+        publishedAt:
+          type: string
+          format: date-time
+        responseWindowClosesAt:
+          type: string
+          format: date-time
+    PublicChallengeCreate:
+      type: object
+      required: [buyingBodyId, title, problemStatement]
+      properties:
+        buyingBodyId:
+          type: string
+        title:
+          type: string
+        problemStatement:
+          type: string
+        affectedService:
+          type: string
+        anticipatedConsequenceGrade:
+          $ref: "#/components/schemas/ConsequenceGrade"
+        routeToMarket:
+          type: string
+          enum: [framework_call_off, open_tender, prototype_competition, direct_award]
+        indicativeValue:
+          $ref: "#/components/schemas/Money"
+        responseWindowClosesAt:
+          type: string
+          format: date-time
+    SupplierProfile:
+      type: object
+      required: [id, name, sizeBand]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        sizeBand:
+          type: string
+          enum: [micro, small, medium, large]
+        domicile:
+          type: string
+        codeSealHeld:
+          type: boolean
+    TenderLot:
+      type: object
+      required: [id, challengeId, reference, status]
+      properties:
+        id:
+          type: string
+        challengeId:
+          type: string
+        reference:
+          type: string
+        status:
+          type: string
+          enum: [open, evaluating, awarded, cancelled]
+        estimatedValue:
+          $ref: "#/components/schemas/Money"
+        suppliersInvited:
+          type: integer
+        smeSuppliersInvited:
+          type: integer
+        bidsReceived:
+          type: integer
+        smeBidsReceived:
+          type: integer
+        requiresPublicDataSupply:
+          type: boolean
+    TenderLotCreate:
+      type: object
+      required: [challengeId, reference]
+      properties:
+        challengeId:
+          type: string
+        reference:
+          type: string
+        estimatedValue:
+          $ref: "#/components/schemas/Money"
+        requiresPublicDataSupply:
+          type: boolean
+    LotAward:
+      type: object
+      required: [id, lotId, supplierId, awardedValue, awardedAt]
+      properties:
+        id:
+          type: string
+        lotId:
+          type: string
+        supplierId:
+          type: string
+        supplierSizeBand:
+          type: string
+          enum: [micro, small, medium, large]
+        awardedValue:
+          $ref: "#/components/schemas/Money"
+        awardedAt:
+          type: string
+          format: date-time
+        contractTermMonths:
+          type: integer
+    LotAwardCreate:
+      type: object
+      required: [supplierId, awardedValue]
+      properties:
+        supplierId:
+          type: string
+        awardedValue:
+          $ref: "#/components/schemas/Money"
+        contractTermMonths:
+          type: integer
+    AiService:
+      type: object
+      required: [id, buyingBodyId, name, consequenceGrade, operatingStatus]
+      properties:
+        id:
+          type: string
+        buyingBodyId:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        consequenceGrade:
+          $ref: "#/components/schemas/ConsequenceGrade"
+        supplierId:
+          type: string
+        lotAwardId:
+          type: string
+        operatingStatus:
+          type: string
+          enum: [registered, assured, live, suspended, retired]
+        transparentMethodRequired:
+          type: boolean
+          description: Set where a sector regulator has mandated a more transparent method
+        accountableOwner:
+          $ref: "#/components/schemas/AccountableOwner"
+        currentWarrantId:
+          type: string
+    AiServiceCreate:
+      type: object
+      required: [buyingBodyId, name, consequenceGrade, accountableOwner]
+      properties:
+        buyingBodyId:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        consequenceGrade:
+          $ref: "#/components/schemas/ConsequenceGrade"
+        supplierId:
+          type: string
+        lotAwardId:
+          type: string
+        accountableOwner:
+          $ref: "#/components/schemas/AccountableOwner"
+    EvidencePack:
+      type: object
+      required: [id, serviceId, version, status]
+      properties:
+        id:
+          type: string
+        serviceId:
+          type: string
+        version:
+          type: integer
+        status:
+          type: string
+          enum: [draft, submitted, accepted, gap_identified, superseded]
+        impactAssessmentReference:
+          type: string
+        equalityAssessmentReference:
+          type: string
+        lawfulBasis:
+          type: string
+        supplierModelDescriptionReference:
+          type: string
+        testingSummary:
+          type: string
+        disclosureReady:
+          type: boolean
+          description: Written on the assumption of freedom-of-information disclosure
+        openGaps:
+          type: array
+          items:
+            type: string
+    EvidencePackCreate:
+      type: object
+      required: [impactAssessmentReference, lawfulBasis]
+      properties:
+        impactAssessmentReference:
+          type: string
+        equalityAssessmentReference:
+          type: string
+        lawfulBasis:
+          type: string
+        supplierModelDescriptionReference:
+          type: string
+        testingSummary:
+          type: string
+        disclosureReady:
+          type: boolean
+    IntelligibilityAssessment:
+      type: object
+      required: [id, serviceId, outcome, assessedAt]
+      properties:
+        id:
+          type: string
+        serviceId:
+          type: string
+        gradeStandardApplied:
+          $ref: "#/components/schemas/ConsequenceGrade"
+        approach:
+          type: string
+          enum: [technical_transparency, explainability, both]
+        outcome:
+          type: string
+          enum: [pass, conditional, delay_deployment]
+        conditions:
+          type: array
+          items:
+            type: string
+        accuracyTradeOffAccepted:
+          type: boolean
+        assessorName:
+          type: string
+        assessedAt:
+          type: string
+          format: date-time
+    IntelligibilityAssessmentCreate:
+      type: object
+      required: [approach, outcome, assessorName]
+      properties:
+        approach:
+          type: string
+          enum: [technical_transparency, explainability, both]
+        outcome:
+          type: string
+          enum: [pass, conditional, delay_deployment]
+        conditions:
+          type: array
+          items:
+            type: string
+        accuracyTradeOffAccepted:
+          type: boolean
+        assessorName:
+          type: string
+    CodeConformance:
+      type: object
+      required: [sealStatus]
+      properties:
+        serviceId:
+          type: string
+        codeReference:
+          type: string
+        sectorVariant:
+          type: string
+        sealStatus:
+          type: string
+          enum: [not_sought, held, under_review, withdrawn, expired]
+        overseerBody:
+          type: string
+        sealValidUntil:
+          type: string
+          format: date
+        ethicalAdvisoryBoardInPlace:
+          type: boolean
+    DeploymentWarrant:
+      type: object
+      required: [id, serviceId, status, issuedAt, expiresAt, accountableOwner]
+      properties:
+        id:
+          type: string
+        serviceId:
+          type: string
+        status:
+          type: string
+          enum: [issued, expiring, expired, suspended, revalidation_required, withdrawn]
+        issuedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        accountableOwner:
+          $ref: "#/components/schemas/AccountableOwner"
+        evidencePackId:
+          type: string
+        intelligibilityAssessmentId:
+          type: string
+        codeConformance:
+          $ref: "#/components/schemas/CodeConformance"
+        dataSupplyAgreementIds:
+          type: array
+          items:
+            type: string
+        conditions:
+          type: array
+          items:
+            type: string
+        suspensionTrigger:
+          type: string
+        registerSequence:
+          type: integer
+          description: Position in the append-only warrant register
+    WarrantIssueRequest:
+      type: object
+      required: [serviceId, evidencePackId, intelligibilityAssessmentId, expiresAt, accountableOwner]
+      properties:
+        serviceId:
+          type: string
+        evidencePackId:
+          type: string
+        intelligibilityAssessmentId:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+        accountableOwner:
+          $ref: "#/components/schemas/AccountableOwner"
+        conditions:
+          type: array
+          items:
+            type: string
+    DataSupplyAgreement:
+      type: object
+      required: [id, buyingBodyId, supplierId, datasetName, status]
+      properties:
+        id:
+          type: string
+        buyingBodyId:
+          type: string
+        supplierId:
+          type: string
+        serviceId:
+          type: string
+        datasetName:
+          type: string
+        recordVolumeBand:
+          type: string
+          enum: [under_10k, under_1m, under_10m, over_10m]
+        anonymisationApproach:
+          type: string
+          enum: [identifiable, pseudonymised, anonymised, aggregate_only, synthetic]
+        optOutHonoured:
+          type: boolean
+        guardianApprovalReference:
+          type: string
+          description: Reference to Caldicott Guardian or equivalent approval
+        significant:
+          type: boolean
+        status:
+          type: string
+          enum: [registered, awaiting_valuation, awaiting_external_review, cleared, blocked, signed, terminated]
+        externalReviewBody:
+          type: string
+        externalReviewOutcome:
+          type: string
+          enum: [not_referred, pending, cleared, cleared_with_changes, objected]
+        valuationId:
+          type: string
+        valueReturnTerms:
+          type: string
+        singlePointOfAccess:
+          type: boolean
+          description: Data released through one controlled access point with terms attached
+        smeAccessProvided:
+          type: boolean
+    DataSupplyAgreementCreate:
+      type: object
+      required: [buyingBodyId, supplierId, datasetName, anonymisationApproach]
+      properties:
+        buyingBodyId:
+          type: string
+        supplierId:
+          type: string
+        serviceId:
+          type: string
+        datasetName:
+          type: string
+        recordVolumeBand:
+          type: string
+          enum: [under_10k, under_1m, under_10m, over_10m]
+        anonymisationApproach:
+          type: string
+          enum: [identifiable, pseudonymised, anonymised, aggregate_only, synthetic]
+        optOutHonoured:
+          type: boolean
+        guardianApprovalReference:
+          type: string
+        significant:
+          type: boolean
+        valueReturnTerms:
+          type: string
+        smeAccessProvided:
+          type: boolean
+    DataValuation:
+      type: object
+      required: [id, agreementId, method, estimatedValue, approvedAt]
+      properties:
+        id:
+          type: string
+        agreementId:
+          type: string
+        method:
+          type: string
+          enum: [comparable_precedent, cost_to_recreate, income_share, market_benchmark, expert_panel]
+        estimatedValue:
+          $ref: "#/components/schemas/Money"
+        considerationReceived:
+          $ref: "#/components/schemas/Money"
+        precedentReferences:
+          type: array
+          items:
+            type: string
+        approverName:
+          type: string
+        approvedAt:
+          type: string
+          format: date-time
+    DataValuationCreate:
+      type: object
+      required: [method, estimatedValue, approverName]
+      properties:
+        method:
+          type: string
+          enum: [comparable_precedent, cost_to_recreate, income_share, market_benchmark, expert_panel]
+        estimatedValue:
+          $ref: "#/components/schemas/Money"
+        considerationReceived:
+          $ref: "#/components/schemas/Money"
+        precedentReferences:
+          type: array
+          items:
+            type: string
+        approverName:
+          type: string
+    DecisionRecord:
+      type: object
+      required: [id, serviceId, warrantId, decidedAt, humanReviewed]
+      properties:
+        id:
+          type: string
+        serviceId:
+          type: string
+        warrantId:
+          type: string
+        caseReference:
+          type: string
+          description: Reference into the department case management system, not personal data
+        decisionType:
+          type: string
+          enum: [prepared_recommendation, fully_automated, human_confirmed]
+        outcomeSummary:
+          type: string
+        modelVersion:
+          type: string
+        rulesetVersion:
+          type: string
+        dataSourceVersions:
+          type: array
+          items:
+            type: string
+        humanReviewed:
+          type: boolean
+        decidedAt:
+          type: string
+          format: date-time
+        explanationArtifactId:
+          type: string
+    DecisionRecordCreate:
+      type: object
+      required: [serviceId, caseReference, decisionType, modelVersion, decidedAt]
+      properties:
+        serviceId:
+          type: string
+        caseReference:
+          type: string
+        decisionType:
+          type: string
+          enum: [prepared_recommendation, fully_automated, human_confirmed]
+        outcomeSummary:
+          type: string
+        modelVersion:
+          type: string
+        rulesetVersion:
+          type: string
+        dataSourceVersions:
+          type: array
+          items:
+            type: string
+        humanReviewed:
+          type: boolean
+        decidedAt:
+          type: string
+          format: date-time
+    ExplanationArtifact:
+      type: object
+      required: [id, decisionId, plainLanguageExplanation, generatedAt]
+      properties:
+        id:
+          type: string
+        decisionId:
+          type: string
+        plainLanguageExplanation:
+          type: string
+        decisiveFactors:
+          type: array
+          items:
+            type: object
+            properties:
+              factor:
+                type: string
+              influence:
+                type: string
+                enum: [increased, decreased, neutral]
+              weightBand:
+                type: string
+                enum: [minor, moderate, major]
+        criteriaApplied:
+          type: array
+          items:
+            type: string
+        thirdPartyDataWithheld:
+          type: boolean
+        tradeSecretsWithheld:
+          type: boolean
+        challengeRouteUrl:
+          type: string
+        generatedAt:
+          type: string
+          format: date-time
+    RedressCase:
+      type: object
+      required: [id, decisionId, serviceId, status, openedAt, resolutionDeadline]
+      properties:
+        id:
+          type: string
+        decisionId:
+          type: string
+        serviceId:
+          type: string
+        ground:
+          type: string
+          enum:
+            - explanation_inadequate
+            - facts_incorrect
+            - unfair_treatment
+            - privacy_concern
+            - policy_misapplied
+        status:
+          type: string
+          enum: [open, under_review, escalated, resolved, expired]
+        openedAt:
+          type: string
+          format: date-time
+        resolutionDeadline:
+          type: string
+          format: date-time
+        escalatedTo:
+          type: string
+        outcome:
+          type: string
+          enum: [upheld_original, overturned, partially_overturned, referred_out]
+        overturnReason:
+          type: string
+    RedressCaseCreate:
+      type: object
+      required: [decisionId, ground]
+      properties:
+        decisionId:
+          type: string
+        ground:
+          type: string
+          enum:
+            - explanation_inadequate
+            - facts_incorrect
+            - unfair_treatment
+            - privacy_concern
+            - policy_misapplied
+        submissionNote:
+          type: string
+    PortfolioInvestment:
+      type: object
+      required: [id, buyingBodyId, name, stage, committedAmount]
+      properties:
+        id:
+          type: string
+        buyingBodyId:
+          type: string
+        challengeId:
+          type: string
+        name:
+          type: string
+        stage:
+          type: string
+          enum: [idea, proof_of_concept, pilot, running_service, discontinued]
+        committedAmount:
+          $ref: "#/components/schemas/Money"
+        declaredFailureTolerance:
+          type: number
+          format: float
+          description: Share of the portfolio expected not to proceed, agreed in advance
+        realisedValue:
+          $ref: "#/components/schemas/Money"
+        supplierSizeBand:
+          type: string
+          enum: [micro, small, medium, large]
+        appropriationYear:
+          type: integer
+    PortfolioInvestmentCreate:
+      type: object
+      required: [buyingBodyId, name, stage, committedAmount]
+      properties:
+        buyingBodyId:
+          type: string
+        challengeId:
+          type: string
+        name:
+          type: string
+        stage:
+          type: string
+          enum: [idea, proof_of_concept, pilot, running_service, discontinued]
+        committedAmount:
+          $ref: "#/components/schemas/Money"
+        declaredFailureTolerance:
+          type: number
+          format: float
+        supplierSizeBand:
+          type: string
+          enum: [micro, small, medium, large]
+        appropriationYear:
+          type: integer
+    OversightWorkloadEntry:
+      type: object
+      required: [id, period, body, activity]
+      properties:
+        id:
+          type: string
+        period:
+          type: string
+        body:
+          type: string
+          description: Regulator, auditor, or internal assurance function
+        activity:
+          type: string
+          enum:
+            - evidence_pack_review
+            - intelligibility_assessment
+            - data_agreement_review
+            - warrant_decision
+            - redress_adjudication
+            - value_for_money_review
+        caseCount:
+          type: integer
+        assessorDays:
+          type: number
+          format: float
+        estimatedCost:
+          $ref: "#/components/schemas/Money"
+    SmeAccessReport:
+      type: object
+      properties:
+        period:
+          type: string
+        buyingBodyId:
+          type: string
+        lotsAwarded:
+          type: integer
+        lotsAwardedToSmes:
+          type: integer
+        awardedValue:
+          $ref: "#/components/schemas/Money"
+        awardedValueToSmes:
+          $ref: "#/components/schemas/Money"
+        smeValueShare:
+          type: number
+          format: float
+        challengesPublishedBeforeTender:
+          type: integer
+        medianDaysChallengeToFirstSmeBid:
+          type: number
+          format: float
+    AnnualReturn:
+      type: object
+      properties:
+        year:
+          type: integer
+        definitionsVersion:
+          type: string
+          description: Held stable year to year so a change of administration does not reset the baseline
+        liveServices:
+          type: integer
+        servicesWithCurrentWarrant:
+          type: integer
+        warrantsSuspended:
+          type: integer
+        decisionsRecorded:
+          type: integer
+        redressCasesOpened:
+          type: integer
+        decisionsOverturnedForInadequateExplanation:
+          type: integer
+        publicDataValuedBeforeSupply:
+          type: integer
+        publicDataSuppliedWithoutValuation:
+          type: integer
+        smeAccess:
+          $ref: "#/components/schemas/SmeAccessReport"
+        portfolioCommitted:
+          $ref: "#/components/schemas/Money"
+        portfolioRealisedValue:
+          $ref: "#/components/schemas/Money"
+        oversightCost:
+          $ref: "#/components/schemas/Money"
+        comparators:
+          type: array
+          items:
+            type: object
+            properties:
+              jurisdiction:
+                type: string
+              indicator:
+                type: string
+              theirValue:
+                type: number
+                format: double
+              ourValue:
+                type: number
+                format: double
+              comparabilityNote:
+                type: string
+        laidBeforeLegislatureAt:
+          type: string
+          format: date-time
+    DataEnvelopePublicChallenge:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/PublicChallenge"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeTenderLot:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/TenderLot"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeLotAward:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/LotAward"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeAiService:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/AiService"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeEvidencePack:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/EvidencePack"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeIntelligibilityAssessment:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/IntelligibilityAssessment"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeCodeConformance:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/CodeConformance"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeDeploymentWarrant:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/DeploymentWarrant"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeDataSupplyAgreement:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/DataSupplyAgreement"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeDataValuation:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/DataValuation"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeDecisionRecord:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/DecisionRecord"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeExplanationArtifact:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/ExplanationArtifact"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeRedressCase:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/RedressCase"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopePortfolioInvestment:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/PortfolioInvestment"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeSmeAccessReport:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/SmeAccessReport"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeAnnualReturn:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/AnnualReturn"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopePublicChallenge:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/PublicChallenge"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeTenderLot:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/TenderLot"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeAiService:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/AiService"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeDeploymentWarrant:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/DeploymentWarrant"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeDataSupplyAgreement:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/DataSupplyAgreement"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeRedressCase:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/RedressCase"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopePortfolioInvestment:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/PortfolioInvestment"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeOversightWorkloadEntry:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/OversightWorkloadEntry"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
